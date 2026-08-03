@@ -98,18 +98,3 @@ no traceback (exit code `1`).
 pip install -e ".[dev]"
 pytest
 ```
-
-## Iteration-1 limitations
-
-This is iteration 1. It intentionally does not include:
-
-- Abyssal XP, mastery XP, or mastery pool calculations.
-- Combat simulations.
-- Modeling of how XP/interval change with equipment, mastery, preservation,
-  doubling, or success chance — you must enter already-effective values.
-- Multiple training methods or level-band rate changes in one calculation.
-- Resource production/consumption.
-- Built-in skill/action data, a database, or saved history.
-- A graphical or web UI.
-
-See `.planning/iteration-1.md` for the full specification.
