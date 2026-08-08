@@ -1,5 +1,3 @@
-import pytest
-
 from melvor_calc.cli import run
 
 
@@ -33,17 +31,16 @@ class RaisingInput:
         return value
 
 
-def _collect_output():
+def _run(reader):
+    """Run the CLI against ``reader``; returns (exit_code, output_text)."""
     lines = []
-    return lines, lines.append
+    exit_code = run(reader, lines.append)
+    return exit_code, "\n".join(lines)
 
 
 def test_exact_xp_happy_path():
-    answers = ["1", "1000", "10", "100", "2.5"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["1", "1000", "10", "100", "2.5"]))
 
-    text = "\n".join(lines)
     assert exit_code == 0
     assert "Target XP:       1,154" in text
     assert "Remaining XP:    154" in text
@@ -53,11 +50,8 @@ def test_exact_xp_happy_path():
 
 
 def test_level_only_happy_path_shows_assumption():
-    answers = ["2", "2", "3", "50", "3"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["2", "2", "3", "50", "3"]))
 
-    text = "\n".join(lines)
     assert exit_code == 0
     assert "Estimate assumption: current level was treated as exactly 0% complete." in text
     assert "Enter exact XP for a more accurate result." in text
@@ -67,11 +61,8 @@ def test_level_only_happy_path_shows_assumption():
 
 
 def test_already_at_target():
-    answers = ["1", "13034431", "99", "100", "2"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["1", "13034431", "99", "100", "2"]))
 
-    text = "\n".join(lines)
     assert exit_code == 0
     assert "Target already reached." in text
     assert "Actions needed: 0" in text
@@ -79,41 +70,32 @@ def test_already_at_target():
 
 
 def test_invalid_menu_choice_retries_only_choice():
-    answers = ["7", "1", "1000", "10", "100", "2.5"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["7", "1", "1000", "10", "100", "2.5"]))
 
     assert exit_code == 0
-    assert any("Enter one of: 1, 2." in line for line in lines)
+    assert "Enter one of: 1, 2." in text
 
 
 def test_invalid_numeric_input_retries_only_that_field():
     # Target level 120.5 invalid, then 120 valid.
-    answers = ["1", "1000", "120.5", "120", "100", "2.5"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["1", "1000", "120.5", "120", "100", "2.5"]))
 
     assert exit_code == 0
-    assert any("Enter a whole-number level" in line for line in lines)
+    assert "Enter a whole-number level" in text
 
 
 def test_comma_formatted_current_xp_accepted():
-    answers = ["1", "13,034,431", "99", "100", "2"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["1", "13,034,431", "99", "100", "2"]))
 
-    text = "\n".join(lines)
     assert exit_code == 0
     assert "Target already reached." in text
 
 
 def test_malformed_commas_rejected_then_corrected():
-    answers = ["1", "1,2,3", "1000", "10", "100", "2.5"]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(["1", "1,2,3", "1000", "10", "100", "2.5"]))
 
     assert exit_code == 0
-    assert any("Current XP must be a whole number of 0 or more." in line for line in lines)
+    assert "Current XP must be a whole number of 0 or more." in text
 
 
 def test_full_input_correction_scenario():
@@ -129,10 +111,8 @@ def test_full_input_correction_scenario():
         "NaN",
         "1.2",
     ]
-    lines, write = _collect_output()
-    exit_code = run(ScriptedInput(answers), write)
+    exit_code, text = _run(ScriptedInput(answers))
 
-    text = "\n".join(lines)
     assert exit_code == 0
     assert "Enter one of: 1, 2." in text
     assert "Current XP must be a whole number of 0 or more." in text
@@ -143,18 +123,15 @@ def test_full_input_correction_scenario():
 
 
 def test_keyboard_interrupt_cancels_without_traceback():
-    reader = RaisingInput(["1"], raise_at=1, exc=KeyboardInterrupt())
-    lines, write = _collect_output()
-    exit_code = run(reader, write)
+    exit_code, text = _run(RaisingInput(["1"], raise_at=1, exc=KeyboardInterrupt()))
 
     assert exit_code != 0
-    assert "Cancelled." in lines
+    assert "Cancelled." in text
 
 
 def test_eof_cancels_without_traceback():
-    reader = ScriptedInput(["1"])  # exhausts after menu choice, next read hits EOF
-    lines, write = _collect_output()
-    exit_code = run(reader, write)
+    # ScriptedInput exhausts after the menu choice, so the next read hits EOF.
+    exit_code, text = _run(ScriptedInput(["1"]))
 
     assert exit_code != 0
-    assert "Cancelled." in lines
+    assert "Cancelled." in text

@@ -4,42 +4,25 @@ import pytest
 
 from melvor_calc.formatting import format_decimal, format_duration, format_int
 
-DURATION_EXAMPLES = [
-    (Decimal(0), "0 seconds"),
-    (Decimal(1), "1 second"),
-    (Decimal(60), "1 minute"),
-    (Decimal(61), "1 minute, 1 second"),
-    (Decimal(3_661), "1 hour, 1 minute, 1 second"),
-    (Decimal(90_061), "1 day, 1 hour, 1 minute, 1 second"),
-    (Decimal("0.1"), "1 second"),
+_DURATION_EXAMPLES = [
+    pytest.param(Decimal(0), "0 seconds", id="zero_seconds"),
+    pytest.param(Decimal(1), "1 second", id="one_second"),
+    pytest.param(Decimal(60), "1 minute", id="one_minute"),
+    pytest.param(Decimal(61), "1 minute, 1 second", id="minute_and_second"),
+    pytest.param(Decimal(3_661), "1 hour, 1 minute, 1 second", id="hour_minute_second"),
+    pytest.param(Decimal(90_061), "1 day, 1 hour, 1 minute, 1 second", id="day_hour_minute_second"),
+    pytest.param(Decimal("0.1"), "1 second", id="sub_second_rounds_up_to_one_second"),
+    pytest.param(Decimal(86_400), "1 day", id="exact_day_boundary"),
+    pytest.param(Decimal(2 * 86_400), "2 days", id="plural_days"),
+    pytest.param(Decimal(86_401), "1 day, 1 second", id="zero_valued_middle_units_omitted"),
+    pytest.param(Decimal("59.001"), "1 minute", id="sub_second_input_rounds_up_across_minute_boundary"),
+    pytest.param(Decimal(30 * 3_600), "1 day, 6 hours", id="large_duration_does_not_wrap_after_24_hours"),
 ]
 
 
-@pytest.mark.parametrize("seconds,expected", DURATION_EXAMPLES)
+@pytest.mark.parametrize("seconds,expected", _DURATION_EXAMPLES)
 def test_duration_examples(seconds, expected):
     assert format_duration(seconds) == expected
-
-
-def test_exact_day_boundary():
-    assert format_duration(Decimal(86_400)) == "1 day"
-
-
-def test_plural_days():
-    assert format_duration(Decimal(2 * 86_400)) == "2 days"
-
-
-def test_zero_valued_middle_units_omitted():
-    # 1 day and 1 second, no hours or minutes.
-    assert format_duration(Decimal(86_401)) == "1 day, 1 second"
-
-
-def test_sub_second_input_rounds_up():
-    assert format_duration(Decimal("59.001")) == "1 minute"
-
-
-def test_large_duration_does_not_wrap_after_24_hours():
-    # 30 hours should show as 1 day, 6 hours, not 30 hours.
-    assert format_duration(Decimal(30 * 3_600)) == "1 day, 6 hours"
 
 
 def test_format_int_thousands_separator():

@@ -1,4 +1,4 @@
-from decimal import ROUND_CEILING, Decimal
+from decimal import Decimal
 
 import pytest
 
@@ -76,13 +76,10 @@ def test_decimal_xp_per_action_rounds_up_without_float():
             xp_per_action=Decimal("3.3"),
         )
     )
-    target_xp = xp_for_level(2)
-    assert result.remaining_xp == target_xp
-
-    expected_actions = int(
-        (Decimal(target_xp) / Decimal("3.3")).to_integral_value(rounding=ROUND_CEILING)
-    )
-    assert result.actions_required == expected_actions
+    # xp_for_level(2) == 83 (see test_experience.py::_KNOWN_VALUES); 83 / 3.3
+    # == 25.1515..., which must round up to 26, not truncate to 25.
+    assert result.remaining_xp == 83
+    assert result.actions_required == 26
 
 
 def test_decimal_action_duration_exact_multiplication():
@@ -102,7 +99,8 @@ def test_xp_per_hour():
     result = calculate_training(
         _request(xp_per_action=Decimal(100), action_seconds=Decimal(2))
     )
-    assert result.xp_per_hour == Decimal(100) * 3600 / Decimal(2)
+    # 100 xp/action * 3600 seconds / 2 seconds/action, computed by hand.
+    assert result.xp_per_hour == Decimal(180_000)
 
 
 def test_level_only_normalization_marks_level_minimum():
@@ -119,67 +117,25 @@ def test_exact_xp_request_unchanged_and_marked_exact():
 
 # --- validation ---
 
+_REJECTED_OVERRIDES = [
+    pytest.param({"current_xp": -1}, id="negative_current_xp"),
+    pytest.param({"target_level": 0}, id="target_level_below_range"),
+    pytest.param({"target_level": 121}, id="target_level_above_range"),
+    pytest.param({"xp_per_action": Decimal(0)}, id="zero_xp_per_action"),
+    pytest.param({"xp_per_action": Decimal(-5)}, id="negative_xp_per_action"),
+    pytest.param({"action_seconds": Decimal(0)}, id="zero_action_seconds"),
+    pytest.param({"action_seconds": Decimal(-1)}, id="negative_action_seconds"),
+    pytest.param({"xp_per_action": Decimal("NaN")}, id="nan_xp_per_action"),
+    pytest.param({"action_seconds": Decimal("Infinity")}, id="positive_infinity_action_seconds"),
+    pytest.param({"xp_per_action": Decimal("-Infinity")}, id="negative_infinity_xp_per_action"),
+    pytest.param({"current_xp": True}, id="bool_current_xp"),
+    pytest.param({"target_level": True}, id="bool_target_level"),
+    pytest.param({"xp_per_action": 100}, id="non_decimal_xp_per_action"),
+    pytest.param({"progress_source": "EXACT_XP"}, id="non_enum_progress_source"),
+]
 
-def test_negative_current_xp_rejected():
+
+@pytest.mark.parametrize("overrides", _REJECTED_OVERRIDES)
+def test_invalid_request_rejected(overrides):
     with pytest.raises(CalculationValidationError):
-        calculate_training(_request(current_xp=-1))
-
-
-def test_target_level_below_range_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(target_level=0))
-
-
-def test_target_level_above_range_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(target_level=121))
-
-
-def test_zero_xp_per_action_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(xp_per_action=Decimal(0)))
-
-
-def test_negative_xp_per_action_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(xp_per_action=Decimal(-5)))
-
-
-def test_zero_action_seconds_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(action_seconds=Decimal(0)))
-
-
-def test_negative_action_seconds_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(action_seconds=Decimal(-1)))
-
-
-def test_nan_xp_per_action_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(xp_per_action=Decimal("NaN")))
-
-
-def test_positive_infinity_action_seconds_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(action_seconds=Decimal("Infinity")))
-
-
-def test_negative_infinity_xp_per_action_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(xp_per_action=Decimal("-Infinity")))
-
-
-def test_bool_current_xp_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(current_xp=True))
-
-
-def test_bool_target_level_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(target_level=True))
-
-
-def test_non_decimal_xp_per_action_rejected():
-    with pytest.raises(CalculationValidationError):
-        calculate_training(_request(xp_per_action=100))
+        calculate_training(_request(**overrides))
