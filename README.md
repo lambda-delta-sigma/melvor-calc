@@ -42,6 +42,9 @@ progress and target level.
 
 ### Current progress
 
+Current XP may be entered with or without thousands-separating commas
+(`13034431` or `13,034,431`); both are accepted.
+
 You can describe your current progress two ways:
 
 1. **Exact current XP** (recommended) — your exact cumulative skill XP.
@@ -63,6 +66,10 @@ Supported levels: **1 through 120**.
 Required actions are always rounded up to a whole number — a fractional
 action still counts as a full action, and total time is based on that
 rounded count (not on fractional-action time).
+
+Displayed XP/hour, by contrast, is rounded to the nearest whole number
+(half-up) rather than rounded up — it's a display figure, not an action
+count, so there's no need to bias it upward.
 
 ## Example
 
