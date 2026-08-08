@@ -1,5 +1,3 @@
-"""Presentation-layer formatting for training results."""
-
 from __future__ import annotations
 
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
@@ -37,7 +35,6 @@ def format_duration(total_seconds: Decimal) -> str:
 
 
 def format_int(value: int) -> str:
-    """Render an integer with thousands separators."""
     return f"{value:,}"
 
 

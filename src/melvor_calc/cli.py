@@ -1,5 +1,3 @@
-"""Interactive command-line interface for the training calculator."""
-
 from __future__ import annotations
 
 import re
@@ -11,9 +9,13 @@ from melvor_calc.calculator import (
     request_from_current_level,
     request_from_exact_xp,
 )
-from melvor_calc.experience import MAX_SUPPORTED_LEVEL, MIN_SUPPORTED_LEVEL
+from melvor_calc.experience import (
+    MAX_SUPPORTED_LEVEL,
+    MIN_SUPPORTED_LEVEL,
+    ExperienceValidationError,
+)
 from melvor_calc.formatting import format_decimal, format_duration, format_int
-from melvor_calc.models import ProgressSource, TrainingResult
+from melvor_calc.models import CalculationValidationError, ProgressSource, TrainingResult
 
 ReadFunc = Callable[[str], str]
 WriteFunc = Callable[[str], None]
@@ -53,19 +55,19 @@ def _parse_level(raw: str) -> int:
     try:
         value = int(text)
     except ValueError:
-        raise ValueError(_LEVEL_ERROR) from None
+        raise ExperienceValidationError(_LEVEL_ERROR) from None
     if not (MIN_SUPPORTED_LEVEL <= value <= MAX_SUPPORTED_LEVEL):
-        raise ValueError(_LEVEL_ERROR)
+        raise ExperienceValidationError(_LEVEL_ERROR)
     return value
 
 
 def _parse_current_xp(raw: str) -> int:
     text = raw.strip()
     if not _XP_TEXT_PATTERN.match(text):
-        raise ValueError(_CURRENT_XP_ERROR)
+        raise CalculationValidationError(_CURRENT_XP_ERROR)
     value = int(text.replace(",", ""))
     if value < 0:
-        raise ValueError(_CURRENT_XP_ERROR)
+        raise CalculationValidationError(_CURRENT_XP_ERROR)
     return value
 
 
@@ -74,9 +76,9 @@ def _parse_positive_decimal(raw: str, error_message: str) -> Decimal:
     try:
         value = Decimal(text)
     except InvalidOperation:
-        raise ValueError(error_message) from None
+        raise CalculationValidationError(error_message) from None
     if not value.is_finite() or value <= 0:
-        raise ValueError(error_message)
+        raise CalculationValidationError(error_message)
     return value
 
 

@@ -1,5 +1,3 @@
-"""Domain request/result models for training calculations."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
